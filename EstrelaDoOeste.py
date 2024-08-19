@@ -85,12 +85,13 @@ class RecipeApp(QtWidgets.QMainWindow):
         self.search_button = QtWidgets.QPushButton(self)
         self.search_button.setIcon(QIcon('imagens\\buscar.png'))  # Ajusta o caminho do ícone
         self.search_button.setIconSize(QtCore.QSize(24, 24))  # Define o tamanho do ícone
+        self.search_button.clicked.connect(self.search_recipe)  # Conecta o clique ao método de busca
         left_panel.addWidget(self.search_button)  # Adiciona o botão de busca ao painel esquerdo
 
         # Filtro de categoria
         self.category_filter = QtWidgets.QComboBox(self)
         self.category_filter.addItem("Todas")  # Adiciona a opção "Todas"
-        self.category_filter.addItems(["Entrada", "Prato Principal", "Doces", "Bebidas Alcolicas", "Sucos", "Salgados", "Sopas"])  # Adiciona outras categorias
+        self.category_filter.addItems(["Entrada", "Prato Principal", "Doces", "Bebidas Alcolicas", "Sucos", "Salgados", "Sopas", "Produtos da Fazenda"])  # Adiciona outras categorias
         self.category_filter.currentTextChanged.connect(self.load_recipes)  # Conecta a mudança de texto à função de carregar receitas
         left_panel.addWidget(self.category_filter)  # Adiciona o filtro de categoria ao painel esquerdo
 
@@ -136,7 +137,9 @@ class RecipeApp(QtWidgets.QMainWindow):
         self.budget_button = QtWidgets.QPushButton(self)
         self.budget_button.setIcon(QIcon('imagens\\orcamento.png'))  # Ajuste o caminho do ícone
         self.budget_button.setIconSize(QtCore.QSize(24, 24))  # Define o tamanho do ícone
-        self.budget_button.clicked.connect(self.open_budget_dialog)  # Conecta o clique ao método de abrir o diálogo de orçamento
+        self.budget_button.clicked.connect(self.open_budget_dialog)
+
+
         buttons_layout.addWidget(self.budget_button)  # Adiciona o botão de orçamento ao layout de botões
 
     def open_budget_dialog(self):
@@ -205,7 +208,7 @@ class RecipeApp(QtWidgets.QMainWindow):
             if ok:
                 stock, ok = QtWidgets.QInputDialog.getInt(self, 'Estoque', 'Quantidade em Estoque:')
                 if ok:
-                    categories = ["Entrada", "Prato Principal", "Doces", "Bebidas Alcolicas", "Sucos", "Salgados", "Sopas"]
+                    categories = ["Entrada", "Prato Principal", "Doces", "Bebidas Alcolicas", "Sucos", "Salgados", "Sopas", "Produtos da Fazenda"]
                     category, ok = QtWidgets.QInputDialog.getItem(self, "Categoria", "Escolha a categoria da receita:", categories, 0, False)
                     if ok and category:
                         cursor.execute("INSERT INTO recipes (name, dollar_value, stock, category) VALUES (?, ?, ?, ?)", (name, dollar_value, stock, category))
@@ -283,79 +286,90 @@ class EditRecipeDialog(QtWidgets.QDialog):
         self.setGeometry(100, 100, 400, 300)
         self.recipe_id = recipe_id
         self.initUI()
-
+#-------------------------------------------------------
     def initUI(self):
-        layout = QtWidgets.QVBoxLayout(self)
+            layout = QtWidgets.QVBoxLayout(self)
 
-        # Recipe name
-        cursor.execute("SELECT name, dollar_value, stock, category FROM recipes WHERE id = ?", (self.recipe_id,))
-        recipe = cursor.fetchone()
-        self.name_edit = QtWidgets.QLineEdit(recipe[0], self)
-        layout.addWidget(QtWidgets.QLabel('Nome da Receita:'))
-        layout.addWidget(self.name_edit)
+            # Recipe name
+            cursor.execute("SELECT name, dollar_value, stock, category FROM recipes WHERE id = ?", (self.recipe_id,))
+            recipe = cursor.fetchone()
+            self.name_edit = QtWidgets.QLineEdit(recipe[0], self)
+            self.name_edit.setMaxLength(100)  # Define o comprimento máximo para o campo de texto
+            self.name_edit.textChanged.connect(self.convert_to_upper)  # Conecta a mudança de texto ao método de conversão
+            layout.addWidget(QtWidgets.QLabel('Nome da Receita:'))
+            layout.addWidget(self.name_edit)
 
-        # Dollar value
-        self.dollar_value_edit = QtWidgets.QDoubleSpinBox(self)
-        self.dollar_value_edit.setDecimals(2)
-        self.dollar_value_edit.setValue(recipe[1])
-        layout.addWidget(QtWidgets.QLabel('Preço do Prato:'))
-        layout.addWidget(self.dollar_value_edit)
+            # Dollar value
+            self.dollar_value_edit = QtWidgets.QDoubleSpinBox(self)
+            self.dollar_value_edit.setDecimals(2)
+            self.dollar_value_edit.setValue(recipe[1])
+            layout.addWidget(QtWidgets.QLabel('Preço do Prato:'))
+            layout.addWidget(self.dollar_value_edit)
 
-        # Stock
-        self.stock_edit = QtWidgets.QSpinBox(self)
-        self.stock_edit.setMaximum(100000)  # Define o valor máximo para o estoque
-        self.stock_edit.setValue(recipe[2])
-        layout.addWidget(QtWidgets.QLabel('Quantidade em Estoque:'))
-        layout.addWidget(self.stock_edit)
+            # Stock
+            self.stock_edit = QtWidgets.QSpinBox(self)
+            self.stock_edit.setMaximum(100000)  # Define o valor máximo para o estoque
+            self.stock_edit.setValue(recipe[2])
+            layout.addWidget(QtWidgets.QLabel('Quantidade em Estoque:'))
+            layout.addWidget(self.stock_edit)
 
-        # Category
-        self.category_edit = QtWidgets.QComboBox(self)
-        self.category_edit.addItems(["Entrada", "Prato Principal", "Doces", "Bebidas Alcolicas", "Sucos", "Salgados", "Sopas"])
-        self.category_edit.setCurrentText(recipe[3])
-        layout.addWidget(QtWidgets.QLabel('Categoria:'))
-        layout.addWidget(self.category_edit)
+            # Category
+            self.category_edit = QtWidgets.QComboBox(self)
+            self.category_edit.addItems(["Entrada", "Prato Principal", "Doces", "Bebidas Alcolicas", "Sucos", "Salgados", "Sopas"])
+            self.category_edit.setCurrentText(recipe[3])
+            layout.addWidget(QtWidgets.QLabel('Categoria:'))
+            layout.addWidget(self.category_edit)
 
-        # Ingredients
-        self.ingredients_list = QtWidgets.QListWidget(self)
-        layout.addWidget(QtWidgets.QLabel('Ingredientes:'))
-        layout.addWidget(self.ingredients_list)
-        self.load_ingredients()
+            # Ingredients
+            self.ingredients_list = QtWidgets.QListWidget(self)
+            layout.addWidget(QtWidgets.QLabel('Ingredientes:'))
+            layout.addWidget(self.ingredients_list)
+            self.load_ingredients()
 
-        # Add ingredient
-        add_ingredient_layout = QtWidgets.QHBoxLayout()
-        self.new_ingredient_edit = QtWidgets.QLineEdit(self)
-        add_ingredient_layout.addWidget(self.new_ingredient_edit)
+            # Add ingredient
+            add_ingredient_layout = QtWidgets.QHBoxLayout()
+            self.new_ingredient_edit = QtWidgets.QLineEdit(self)
+            self.new_ingredient_edit.setMaxLength(100)  # Define o comprimento máximo para o campo de texto
+            self.new_ingredient_edit.textChanged.connect(self.convert_to_upper)  # Conecta a mudança de texto ao método de conversão
+            add_ingredient_layout.addWidget(self.new_ingredient_edit)
 
-        # Ingredient suggestions
-        cursor.execute("SELECT DISTINCT name FROM ingredients")
-        ingredient_names = [row[0] for row in cursor.fetchall()]
-        completer = QtWidgets.QCompleter(ingredient_names)
-        self.new_ingredient_edit.setCompleter(completer)
+            # Ingredient suggestions
+            cursor.execute("SELECT DISTINCT name FROM ingredients")
+            ingredient_names = [row[0] for row in cursor.fetchall()]
+            completer = QtWidgets.QCompleter(ingredient_names)
+            self.new_ingredient_edit.setCompleter(completer)
 
-        self.new_ingredient_quantity_edit = QtWidgets.QSpinBox(self)
-        self.new_ingredient_quantity_edit.setMinimum(1)
-        add_ingredient_layout.addWidget(self.new_ingredient_quantity_edit)
-    
-        add_ingredient_button = QtWidgets.QPushButton('Adicionar', self)
-        add_ingredient_button.clicked.connect(self.add_ingredient)
-        add_ingredient_layout.addWidget(add_ingredient_button)
-        layout.addLayout(add_ingredient_layout)
+            self.new_ingredient_quantity_edit = QtWidgets.QSpinBox(self)
+            self.new_ingredient_quantity_edit.setMinimum(1)
+            add_ingredient_layout.addWidget(self.new_ingredient_quantity_edit)
+        
+            add_ingredient_button = QtWidgets.QPushButton('Adicionar', self)
+            add_ingredient_button.clicked.connect(self.add_ingredient)
+            add_ingredient_layout.addWidget(add_ingredient_button)
+            layout.addLayout(add_ingredient_layout)
 
-        # Delete ingredient
-        delete_ingredient_button = QtWidgets.QPushButton('Deletar Ingrediente', self)
-        delete_ingredient_button.clicked.connect(self.delete_ingredient)
-        layout.addWidget(delete_ingredient_button)
+            # Delete ingredient
+            delete_ingredient_button = QtWidgets.QPushButton('Deletar Ingrediente', self)
+            delete_ingredient_button.clicked.connect(self.delete_ingredient)
+            layout.addWidget(delete_ingredient_button)
 
-        # Save and Cancel buttons
-        buttons_layout = QtWidgets.QHBoxLayout()
-        save_button = QtWidgets.QPushButton('Salvar', self)
-        save_button.clicked.connect(self.save_recipe)
-        buttons_layout.addWidget(save_button)
+            # Save and Cancel buttons
+            buttons_layout = QtWidgets.QHBoxLayout()
+            save_button = QtWidgets.QPushButton('Salvar', self)
+            save_button.clicked.connect(self.save_recipe)
+            buttons_layout.addWidget(save_button)
 
-        cancel_button = QtWidgets.QPushButton('Cancelar', self)
-        cancel_button.clicked.connect(self.reject)
-        buttons_layout.addWidget(cancel_button)
-        layout.addLayout(buttons_layout)
+            cancel_button = QtWidgets.QPushButton('Cancelar', self)
+            cancel_button.clicked.connect(self.reject)
+            buttons_layout.addWidget(cancel_button)
+            layout.addLayout(buttons_layout)
+
+    def convert_to_upper(self):
+        # Converte o texto de todos os campos para maiúsculas
+        if self.sender() == self.name_edit:
+            self.name_edit.setText(self.name_edit.text().upper())
+        elif self.sender() == self.new_ingredient_edit:
+            self.new_ingredient_edit.setText(self.new_ingredient_edit.text().upper())
 
     def load_ingredients(self):
         self.ingredients_list.clear()
